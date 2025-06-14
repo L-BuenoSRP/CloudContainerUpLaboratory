@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  terraform-aws-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Argumentos para aumentar tolerância a falhas durante o build
+        DOCKER_TIMEOUT: 600
+      # Opções de rede para melhorar a conectividade durante o build
+      network: host
+    container_name: terraform-aws-dev
+    # Configuração de rede para o container em execução
+    network_mode: "host"
+    volumes:
+      - ./:/home/developer/project
+      - ~/.aws:/home/developer/.aws:ro  # Mapeia as credenciais da AWS (somente leitura)
+      # - ~/.ssh:/home/developer/.ssh:ro  # Mapeia as chaves SSH (somente leitura)
+      - ~/.ssh:/home/developer/.ssh  # Mapeia as chaves SSH
+    environment:
+      - TZ=America/Sao_Paulo
+      # Credenciais da AWS através de variáveis de ambiente em vez de arquivos
+      - AWS_ACCESS_KEY_ID=
+      - AWS_SECRET_ACCESS_KEY=
+      - AWS_DEFAULT_REGION=us-east-1
+      # Aumenta os timeouts para operações de rede no container
+      - APT_CONFIG_TIMEOUT=120
+    # Configurações adicionais para melhorar a estabilidade
+    restart: unless-stopped
+    working_dir: /home/developer/project
+    tty: true
+    stdin_open: true
+    command: tail -f /dev/null
+    # Configurações de DNS alternativas caso necessário
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    extra_hosts:
+      - "archive.ubuntu.com:91.189.91.82"  # IP explícito para o repositório
+    # Configuração de healthcheck para garantir que o container está funcionando corretamente
+    healthcheck:
+      test: ["CMD", "bash", "-c", "ps aux | grep tail"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
